@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Register - Student</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; width: 350px; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #333; text-align: center; }
+        label { display: block; margin-top: 15px; color: #666; font-size: 14px; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; margin-top: 20px; padding: 12px; background-color: #007bff; border: none; color: white; font-size: 16px; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0069d9; }
+        .footer { text-align: center; margin-top: 15px; font-size: 14px; }
+        .footer a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Student Registration</h2>
+        <form action="/register" method="POST">
+            <label for="username">Choose Username</label>
+            <input type="text" id="username" name="username" required>
+            
+            <label for="password">Choose Password</label>
+            <input type="password" id="password" name="password" required>
+            
+            <button type="submit">Create Account</button>
+        </form>
+        <div class="footer">
+            Already registered? <a href="/login">Login here</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>All Student Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #e9ecef; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Overall Student Examination Results</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Student Username</th>
+                    <th>Exam Title</th>
+                    <th>Score</th>
+                    <th>Total Questions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in results %}
+                <tr>
+                    <td>{{ r.username }}</td>
+                    <td>{{ r.title }}</td>
+                    <td>{{ r.score }}</td>
+                    <td>{{ r.total }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4">No student submission results recorded yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <a href="/admin">Back to Dashboard</a>
+    </div>
+</body>
+</html>

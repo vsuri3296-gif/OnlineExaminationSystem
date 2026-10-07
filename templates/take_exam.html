@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Take Exam - {{ exam.title }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .q-card { margin-bottom: 20px; padding: 15px; border: 1px solid #dee2e6; border-radius: 6px; background-color: #fafafa; }
+        .q-title { font-weight: bold; margin-bottom: 10px; }
+        label { margin-left: 8px; font-size: 15px; cursor: pointer; }
+        button { padding: 12px 25px; background-color: #28a745; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Exam: {{ exam.title }}</h1>
+        <form action="/submit_exam/{{ exam.id }}" method="POST">
+            {% for q in questions %}
+                <div class="q-card">
+                    <div class="q-title">Q{{ loop.index }}: {{ q.question }}</div>
+                    
+                    <div>
+                        <input type="radio" name="q_{{ q.id }}" value="1" id="q_{{ q.id }}_1">
+                        <label for="q_{{ q.id }}_1">{{ q.option1 }}</label>
+                    </div>
+                    <div>
+                        <input type="radio" name="q_{{ q.id }}" value="2" id="q_{{ q.id }}_2">
+                        <label for="q_{{ q.id }}_2">{{ q.option2 }}</label>
+                    </div>
+                    <div>
+                        <input type="radio" name="q_{{ q.id }}" value="3" id="q_{{ q.id }}_3">
+                        <label for="q_{{ q.id }}_3">{{ q.option3 }}</label>
+                    </div>
+                    <div>
+                        <input type="radio" name="q_{{ q.id }}" value="4" id="q_{{ q.id }}_4">
+                        <label for="q_{{ q.id }}_4">{{ q.option4 }}</label>
+                    </div>
+                </div>
+            {% else %}
+                <p>There are no questions configured for this exam yet.</p>
+            {% endfor %}
+
+            {% if questions %}
+                <button type="submit">Submit All Answers</button>
+            {% endif %}
+        </form>
+        <br>
+        <a href="/student">Cancel and Exit</a>
+    </div>
+</body>
+</html>

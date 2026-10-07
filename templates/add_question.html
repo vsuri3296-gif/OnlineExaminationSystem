@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Question</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        input, select { width: 100%; padding: 8px; margin: 6px 0 15px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { padding: 12px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Add Question to Exam</h2>
+        <form action="/add_question" method="POST">
+            <label for="exam_id">Select Target Exam:</label>
+            <select name="exam_id" id="exam_id" required>
+                {% for exam in exams %}
+                    <option value="{{ exam.id }}">{{ exam.title }}</option>
+                {% endfor %}
+            </select>
+
+            <label for="question">Question Text:</label>
+            <input type="text" id="question" name="question" required>
+
+            <label for="option1">Option 1:</label>
+            <input type="text" id="option1" name="option1" required>
+
+            <label for="option2">Option 2:</label>
+            <input type="text" id="option2" name="option2" required>
+
+            <label for="option3">Option 3:</label>
+            <input type="text" id="option3" name="option3" required>
+
+            <label for="option4">Option 4:</label>
+            <input type="text" id="option4" name="option4" required>
+
+            <label for="correct">Correct Option Number:</label>
+            <select name="correct" id="correct" required>
+                <option value="1">Option 1</option>
+                <option value="2">Option 2</option>
+                <option value="3">Option 3</option>
+                <option value="4">Option 4</option>
+            </select>
+
+            <button type="submit">Save Question</button>
+        </form>
+        <br>
+        <a href="/admin">Back to Dashboard</a>
+    </div>
+</body>
+</html>
