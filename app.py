@@ -1,86 +1,230 @@
 from flask import Flask, render_template, request, redirect, session, url_for
 import sqlite3
+import os
+
+# PostgreSQL is used on Render
+# SQLite is used locally
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+except ImportError:
+    psycopg2 = None
+    RealDictCursor = None
+
 
 app = Flask(__name__)
-app.secret_key = "secret_key_examination_system"
 
-# Passing score threshold (50%)
+# Use Render environment variable in production
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "secret_key_examination_system"
+)
+
 PASSING_PERCENTAGE = 50.0
 
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+# --------------------------------------------------
+# DATABASE CONNECTION
+# --------------------------------------------------
 
 def get_db():
-    conn = sqlite3.connect("database.db", timeout=30.0)
-    conn.execute("PRAGMA journal_mode=WAL;")
+    # PostgreSQL on Render
+    if DATABASE_URL:
+        if psycopg2 is None:
+            raise RuntimeError(
+                "psycopg2-binary is required for PostgreSQL."
+            )
+
+        conn = psycopg2.connect(DATABASE_URL)
+        return conn
+
+    # SQLite locally
+    conn = sqlite3.connect(
+        "database.db",
+        timeout=30.0
+    )
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL;")
     return conn
 
+
+def is_postgres():
+    return bool(DATABASE_URL)
+
+
+def execute_query(cursor, query, params=()):
+    """
+    Allows the same ? placeholders to work with SQLite
+    and PostgreSQL.
+    """
+    if is_postgres():
+        query = query.replace("?", "%s")
+
+    cursor.execute(query, params)
+
+
+def fetch_one(cursor):
+    return cursor.fetchone()
+
+
+def fetch_all(cursor):
+    return cursor.fetchall()
+
+
+# --------------------------------------------------
+# INITIALIZE DATABASE
+# --------------------------------------------------
 
 def init_db():
     conn = get_db()
     cursor = conn.cursor()
 
-    # Users table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            password TEXT,
-            role TEXT
+    if is_postgres():
+
+        # Users table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE,
+                password TEXT,
+                role TEXT
+            )
+        """)
+
+        # Exams table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS exams (
+                id SERIAL PRIMARY KEY,
+                title TEXT
+            )
+        """)
+
+        # Questions table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS questions (
+                id SERIAL PRIMARY KEY,
+                exam_id INTEGER,
+                question TEXT,
+                option1 TEXT,
+                option2 TEXT,
+                option3 TEXT,
+                option4 TEXT,
+                correct INTEGER
+            )
+        """)
+
+        # Results table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS results (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER,
+                exam_id INTEGER,
+                score INTEGER,
+                total INTEGER,
+                status TEXT
+            )
+        """)
+
+        # Make sure status exists
+        cursor.execute("""
+            ALTER TABLE results
+            ADD COLUMN IF NOT EXISTS status TEXT
+        """)
+
+        # Check admin
+        execute_query(
+            cursor,
+            "SELECT * FROM users WHERE username = ?",
+            ("admin",)
         )
-    """)
 
-    # Exams table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS exams (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT
+        admin = fetch_one(cursor)
+
+        if not admin:
+            execute_query(
+                cursor,
+                """
+                INSERT INTO users
+                (username, password, role)
+                VALUES (?, ?, ?)
+                """,
+                ("admin", "admin123", "admin")
+            )
+
+    else:
+
+        # SQLite Users table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE,
+                password TEXT,
+                role TEXT
+            )
+        """)
+
+        # SQLite Exams table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS exams (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT
+            )
+        """)
+
+        # SQLite Questions table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS questions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                exam_id INTEGER,
+                question TEXT,
+                option1 TEXT,
+                option2 TEXT,
+                option3 TEXT,
+                option4 TEXT,
+                correct INTEGER
+            )
+        """)
+
+        # SQLite Results table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                exam_id INTEGER,
+                score INTEGER,
+                total INTEGER,
+                status TEXT
+            )
+        """)
+
+        # Add status column if required
+        try:
+            cursor.execute(
+                "ALTER TABLE results ADD COLUMN status TEXT"
+            )
+        except sqlite3.OperationalError:
+            pass
+
+        # Check admin
+        execute_query(
+            cursor,
+            "SELECT * FROM users WHERE username = ?",
+            ("admin",)
         )
-    """)
 
-    # Questions table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS questions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            exam_id INTEGER,
-            question TEXT,
-            option1 TEXT,
-            option2 TEXT,
-            option3 TEXT,
-            option4 TEXT,
-            correct INTEGER
-        )
-    """)
+        admin = fetch_one(cursor)
 
-    # Results table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS results (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            exam_id INTEGER,
-            score INTEGER,
-            total INTEGER,
-            status TEXT
-        )
-    """)
-
-    # Add status column if it does not exist
-    try:
-        cursor.execute("ALTER TABLE results ADD COLUMN status TEXT")
-    except sqlite3.OperationalError:
-        pass
-
-    # Create default admin account
-    cursor.execute(
-        "SELECT * FROM users WHERE username = 'admin'"
-    )
-
-    if not cursor.fetchone():
-        cursor.execute(
-            """
-            INSERT INTO users (username, password, role)
-            VALUES ('admin', 'admin123', 'admin')
-            """
-        )
+        if not admin:
+            execute_query(
+                cursor,
+                """
+                INSERT INTO users
+                (username, password, role)
+                VALUES (?, ?, ?)
+                """,
+                ("admin", "admin123", "admin")
+            )
 
     conn.commit()
     conn.close()
@@ -112,17 +256,24 @@ def login():
         password = request.form["password"]
 
         conn = get_db()
-        cursor = conn.cursor()
 
-        cursor.execute(
+        if is_postgres():
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+        else:
+            cursor = conn.cursor()
+
+        execute_query(
+            cursor,
             """
-            SELECT * FROM users
+            SELECT *
+            FROM users
             WHERE username = ? AND password = ?
             """,
             (username, password)
         )
 
-        user = cursor.fetchone()
+        user = fetch_one(cursor)
+
         conn.close()
 
         if user:
@@ -132,10 +283,13 @@ def login():
             session["role"] = user["role"]
 
             if user["role"] == "admin":
-                return redirect(url_for("admin_dashboard"))
-
+                return redirect(
+                    url_for("admin_dashboard")
+                )
             else:
-                return redirect(url_for("student_dashboard"))
+                return redirect(
+                    url_for("student_dashboard")
+                )
 
         else:
             return "Invalid Credentials. Please try again."
@@ -160,12 +314,14 @@ def register():
 
         try:
 
-            cursor.execute(
+            execute_query(
+                cursor,
                 """
-                INSERT INTO users (username, password, role)
-                VALUES (?, ?, 'student')
+                INSERT INTO users
+                (username, password, role)
+                VALUES (?, ?, ?)
                 """,
-                (username, password)
+                (username, password, "student")
             )
 
             conn.commit()
@@ -173,8 +329,9 @@ def register():
 
             return redirect(url_for("login"))
 
-        except sqlite3.IntegrityError:
+        except Exception:
 
+            conn.rollback()
             conn.close()
 
             return "Username already exists!"
@@ -192,7 +349,22 @@ def admin_dashboard():
     if session.get("role") != "admin":
         return redirect(url_for("login"))
 
-    return render_template("admin_dashboard.html")
+    conn = get_db()
+    cursor = conn.cursor()
+
+    execute_query(
+        cursor,
+        "SELECT * FROM exams ORDER BY id"
+    )
+
+    exams = fetch_all(cursor)
+
+    conn.close()
+
+    return render_template(
+        "admin_dashboard.html",
+        exams=exams
+    )
 
 
 # --------------------------------------------------
@@ -212,7 +384,8 @@ def add_exam():
         conn = get_db()
         cursor = conn.cursor()
 
-        cursor.execute(
+        execute_query(
+            cursor,
             "INSERT INTO exams (title) VALUES (?)",
             (title,)
         )
@@ -220,7 +393,9 @@ def add_exam():
         conn.commit()
         conn.close()
 
-        return redirect(url_for("admin_dashboard"))
+        return redirect(
+            url_for("admin_dashboard")
+        )
 
     return render_template("create_exam.html")
 
@@ -229,8 +404,15 @@ def add_exam():
 # ADD QUESTION
 # --------------------------------------------------
 
-@app.route("/add_question", methods=["GET", "POST"])
-def add_question():
+@app.route(
+    "/add_question",
+    methods=["GET", "POST"]
+)
+@app.route(
+    "/add_question/<int:exam_id>",
+    methods=["GET", "POST"]
+)
+def add_question(exam_id=None):
 
     if session.get("role") != "admin":
         return redirect(url_for("login"))
@@ -248,7 +430,8 @@ def add_question():
         option4 = request.form["option4"]
         correct = request.form["correct"]
 
-        cursor.execute(
+        execute_query(
+            cursor,
             """
             INSERT INTO questions
             (
@@ -276,16 +459,23 @@ def add_question():
         conn.commit()
         conn.close()
 
-        return redirect(url_for("admin_dashboard"))
+        return redirect(
+            url_for("admin_dashboard")
+        )
 
-    cursor.execute("SELECT * FROM exams")
-    exams = cursor.fetchall()
+    execute_query(
+        cursor,
+        "SELECT * FROM exams ORDER BY id"
+    )
+
+    exams = fetch_all(cursor)
 
     conn.close()
 
     return render_template(
         "add_question.html",
-        exams=exams
+        exams=exams,
+        selected_exam_id=exam_id
     )
 
 
@@ -300,14 +490,25 @@ def student_dashboard():
         return redirect(url_for("login"))
 
     conn = get_db()
-    cursor = conn.cursor()
+
+    if is_postgres():
+        cursor = conn.cursor(
+            cursor_factory=RealDictCursor
+        )
+    else:
+        cursor = conn.cursor()
 
     # Get all exams
-    cursor.execute("SELECT * FROM exams")
-    exams = cursor.fetchall()
+    execute_query(
+        cursor,
+        "SELECT * FROM exams ORDER BY id"
+    )
+
+    exams = fetch_all(cursor)
 
     # Get student's results
-    cursor.execute(
+    execute_query(
+        cursor,
         """
         SELECT
             exams.title,
@@ -318,11 +519,12 @@ def student_dashboard():
         JOIN exams
             ON results.exam_id = exams.id
         WHERE results.user_id = ?
+        ORDER BY results.id DESC
         """,
         (session["user_id"],)
     )
 
-    student_results = cursor.fetchall()
+    student_results = fetch_all(cursor)
 
     conn.close()
 
@@ -344,31 +546,40 @@ def take_exam(exam_id):
         return redirect(url_for("login"))
 
     conn = get_db()
-    cursor = conn.cursor()
+
+    if is_postgres():
+        cursor = conn.cursor(
+            cursor_factory=RealDictCursor
+        )
+    else:
+        cursor = conn.cursor()
 
     # Get exam
-    cursor.execute(
+    execute_query(
+        cursor,
         "SELECT * FROM exams WHERE id = ?",
         (exam_id,)
     )
 
-    exam = cursor.fetchone()
+    exam = fetch_one(cursor)
 
-    # Exam not found
     if not exam:
         conn.close()
         return "Exam not found."
 
     # Get questions
-    cursor.execute(
+    execute_query(
+        cursor,
         """
-        SELECT * FROM questions
+        SELECT *
+        FROM questions
         WHERE exam_id = ?
+        ORDER BY id
         """,
         (exam_id,)
     )
 
-    questions = cursor.fetchall()
+    questions = fetch_all(cursor)
 
     conn.close()
 
@@ -383,25 +594,37 @@ def take_exam(exam_id):
 # SUBMIT EXAM
 # --------------------------------------------------
 
-@app.route("/submit_exam/<int:exam_id>", methods=["POST"])
+@app.route(
+    "/submit_exam/<int:exam_id>",
+    methods=["POST"]
+)
 def submit_exam(exam_id):
 
     if session.get("role") != "student":
         return redirect(url_for("login"))
 
     conn = get_db()
-    cursor = conn.cursor()
+
+    if is_postgres():
+        cursor = conn.cursor(
+            cursor_factory=RealDictCursor
+        )
+    else:
+        cursor = conn.cursor()
 
     # Get questions
-    cursor.execute(
+    execute_query(
+        cursor,
         """
-        SELECT * FROM questions
+        SELECT *
+        FROM questions
         WHERE exam_id = ?
+        ORDER BY id
         """,
         (exam_id,)
     )
 
-    questions = cursor.fetchall()
+    questions = fetch_all(cursor)
 
     score = 0
     total = len(questions)
@@ -417,7 +640,7 @@ def submit_exam(exam_id):
 
             try:
 
-                if int(selected_option) == q["correct"]:
+                if int(selected_option) == int(q["correct"]):
                     score += 1
 
             except ValueError:
@@ -436,7 +659,8 @@ def submit_exam(exam_id):
         status = "FAIL"
 
     # Save result
-    cursor.execute(
+    execute_query(
+        cursor,
         """
         INSERT INTO results
         (
@@ -460,7 +684,9 @@ def submit_exam(exam_id):
     conn.commit()
     conn.close()
 
-    return redirect(url_for("student_dashboard"))
+    return redirect(
+        url_for("student_dashboard")
+    )
 
 
 # --------------------------------------------------
@@ -474,9 +700,16 @@ def results():
         return redirect(url_for("login"))
 
     conn = get_db()
-    cursor = conn.cursor()
 
-    cursor.execute(
+    if is_postgres():
+        cursor = conn.cursor(
+            cursor_factory=RealDictCursor
+        )
+    else:
+        cursor = conn.cursor()
+
+    execute_query(
+        cursor,
         """
         SELECT
             users.username,
@@ -489,10 +722,11 @@ def results():
             ON results.user_id = users.id
         JOIN exams
             ON results.exam_id = exams.id
+        ORDER BY results.id DESC
         """
     )
 
-    results_data = cursor.fetchall()
+    results_data = fetch_all(cursor)
 
     conn.close()
 
@@ -511,7 +745,9 @@ def logout():
 
     session.clear()
 
-    return redirect(url_for("login"))
+    return redirect(
+        url_for("login")
+    )
 
 
 # --------------------------------------------------
@@ -519,6 +755,7 @@ def logout():
 # --------------------------------------------------
 
 if __name__ == "__main__":
+
     app.run(
         host="0.0.0.0",
         port=5000,
