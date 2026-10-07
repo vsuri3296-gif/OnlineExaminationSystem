@@ -1,69 +1,158 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Student Dashboard</title>
+
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        table { border-collapse: collapse; width: 100%; margin-top: 15px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background-color: #e9ecef; }
-        .exam-btn { display: inline-block; padding: 6px 12px; background-color: #28a745; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; }
-        .badge-pass { padding: 4px 10px; background-color: #28a745; color: white; border-radius: 4px; font-weight: bold; font-size: 13px; }
-        .badge-fail { padding: 4px 10px; background-color: #dc3545; color: white; border-radius: 4px; font-weight: bold; font-size: 13px; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f6f9;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin-bottom: 5px;
+        }
+
+        .top-buttons {
+            margin: 20px 0;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 9px 15px;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-right: 8px;
+            font-size: 14px;
+        }
+
+        .results-btn {
+            background-color: #007bff;
+        }
+
+        .logout-btn {
+            background-color: #dc3545;
+        }
+
+        .exam-btn {
+            display: inline-block;
+            padding: 6px 12px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #e9ecef;
+        }
+
+        .badge-pass {
+            padding: 4px 10px;
+            background-color: #28a745;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .badge-fail {
+            padding: 4px 10px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        .duration {
+            color: #555;
+            font-size: 14px;
+        }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>Student Portal</h1>
-        <p>Welcome, <strong>{{ session.username }}</strong>!</p>
 
-        <h2>Available Examinations</h2>
-        <ul>
-            {% for exam in exams %}
-                <li style="margin-bottom: 10px;">
-                    <strong>{{ exam.title }}</strong> &nbsp;
-                    <a class="exam-btn" href="/take_exam/{{ exam.id }}">Start Exam</a>
-                </li>
-            {% else %}
-                <li>No active exams available at the moment.</li>
-            {% endfor %}
-        </ul>
+<div class="container">
 
-        <h2>Your Previous Results</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Exam Title</th>
-                    <th>Score Obtained</th>
-                    <th>Total Questions</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for result in results %}
-                <tr>
-                    <td>{{ result.title }}</td>
-                    <td>{{ result.score }}</td>
-                    <td>{{ result.total }}</td>
-                    <td>
-                        {% if result.status == 'PASS' %}
-                            <span class="badge-pass">PASS</span>
-                        {% else %}
-                            <span class="badge-fail">FAIL</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4">You have not completed any exams yet.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <br>
-        <a href="/logout">Logout</a>
+    <h1>Student Portal</h1>
+
+    <p>
+        Welcome, <strong>{{ session.username }}</strong>!
+    </p>
+
+    <!-- Navigation Buttons -->
+    <div class="top-buttons">
+        <a class="btn results-btn" href="{{ url_for('student_results') }}">
+            My Results
+        </a>
+
+        <a class="btn logout-btn" href="{{ url_for('logout') }}">
+            Logout
+        </a>
     </div>
-</body>
-</html>
+
+    <h2>Available Examinations</h2>
+
+    <ul>
+        {% for exam in exams %}
+
+            <li style="margin-bottom: 15px;">
+
+                <strong>{{ exam.title }}</strong>
+
+                {% if exam.duration %}
+                    <span class="duration">
+                        — Time: {{ exam.duration }} minutes
+                    </span>
+                {% endif %}
+
+                <br><br>
+
+                <a class="exam-btn"
+                   href="{{ url_for('take_exam', exam_id=exam.id) }}">
+                    Start Exam
+                </a>
+
+            </li>
+
+        {% else %}
+
+            <li>
+                No active exams available at the moment.
+            </li>
+
+        {% endfor %}
+    </ul>
+
+    <hr>
+
+    <h2>Yo
+```

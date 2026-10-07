@@ -1,52 +1,248 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Take Exam - {{ exam.title }}</title>
+    <title>{{ exam["title"] }}</title>
+
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f4f6f9; }
-        .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .q-card { margin-bottom: 20px; padding: 15px; border: 1px solid #dee2e6; border-radius: 6px; background-color: #fafafa; }
-        .q-title { font-weight: bold; margin-bottom: 10px; }
-        label { margin-left: 8px; font-size: 15px; cursor: pointer; }
-        button { padding: 12px 25px; background-color: #28a745; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .timer {
+            background: #dc3545;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .question {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+
+        .option {
+            display: block;
+            margin: 12px 0;
+            padding: 8px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .submit-btn:hover {
+            background: #0056b3;
+        }
     </style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>Exam: {{ exam.title }}</h1>
-        <form action="/submit_exam/{{ exam.id }}" method="POST">
+
+<div class="container">
+
+    <div class="header">
+
+        <div>
+            <h2>{{ exam["title"] }}</h2>
+
+            <p>
+                Time Limit:
+                {{ exam["duration"] }} minutes
+            </p>
+        </div>
+
+        <div class="timer">
+            Time Left:
+            <span id="timer">00:00</span>
+        </div>
+
+    </div>
+
+
+    <form
+        id="examForm"
+        method="POST"
+        action="{{ url_for('submit_exam', exam_id=exam['id']) }}"
+    >
+
+        {% if questions %}
+
             {% for q in questions %}
-                <div class="q-card">
-                    <div class="q-title">Q{{ loop.index }}: {{ q.question }}</div>
-                    
-                    <div>
-                        <input type="radio" name="q_{{ q.id }}" value="1" id="q_{{ q.id }}_1">
-                        <label for="q_{{ q.id }}_1">{{ q.option1 }}</label>
-                    </div>
-                    <div>
-                        <input type="radio" name="q_{{ q.id }}" value="2" id="q_{{ q.id }}_2">
-                        <label for="q_{{ q.id }}_2">{{ q.option2 }}</label>
-                    </div>
-                    <div>
-                        <input type="radio" name="q_{{ q.id }}" value="3" id="q_{{ q.id }}_3">
-                        <label for="q_{{ q.id }}_3">{{ q.option3 }}</label>
-                    </div>
-                    <div>
-                        <input type="radio" name="q_{{ q.id }}" value="4" id="q_{{ q.id }}_4">
-                        <label for="q_{{ q.id }}_4">{{ q.option4 }}</label>
-                    </div>
+
+                <div class="question">
+
+                    <h3>
+                        Question {{ loop.index }}
+                    </h3>
+
+                    <p>
+                        <strong>
+                            {{ q["question"] }}
+                        </strong>
+                    </p>
+
+
+                    <label class="option">
+                        <input
+                            type="radio"
+                            name="question_{{ q['id'] }}"
+                            value="1"
+                            required
+                        >
+                        {{ q["option1"] }}
+                    </label>
+
+
+                    <label class="option">
+                        <input
+                            type="radio"
+                            name="question_{{ q['id'] }}"
+                            value="2"
+                        >
+                        {{ q["option2"] }}
+                    </label>
+
+
+                    <label class="option">
+                        <input
+                            type="radio"
+                            name="question_{{ q['id'] }}"
+                            value="3"
+                        >
+                        {{ q["option3"] }}
+                    </label>
+
+
+                    <label class="option">
+                        <input
+                            type="radio"
+                            name="question_{{ q['id'] }}"
+                            value="4"
+                        >
+                        {{ q["option4"] }}
+                    </label>
+
                 </div>
-            {% else %}
-                <p>There are no questions configured for this exam yet.</p>
+
             {% endfor %}
 
-            {% if questions %}
-                <button type="submit">Submit All Answers</button>
-            {% endif %}
-        </form>
-        <br>
-        <a href="/student">Cancel and Exit</a>
-    </div>
+        {% else %}
+
+            <p>
+                No questions are available for this exam.
+            </p>
+
+        {% endif %}
+
+
+        {% if questions %}
+
+            <button
+                type="submit"
+                class="submit-btn"
+            >
+                Submit Exam
+            </button>
+
+        {% endif %}
+
+    </form>
+
+</div>
+
+
+<script>
+
+    // Duration comes from the exam database.
+    let durationMinutes = Number(
+        "{{ exam['duration'] }}"
+    );
+
+    let totalSeconds = durationMinutes * 60;
+
+    const timerElement =
+        document.getElementById("timer");
+
+    const examForm =
+        document.getElementById("examForm");
+
+
+    function updateTimer() {
+
+        let minutes =
+            Math.floor(totalSeconds / 60);
+
+        let seconds =
+            totalSeconds % 60;
+
+
+        let minuteText =
+            String(minutes).padStart(2, "0");
+
+        let secondText =
+            String(seconds).padStart(2, "0");
+
+
+        timerElement.textContent =
+            minuteText + ":" + secondText;
+
+
+        if (totalSeconds <= 0) {
+
+            clearInterval(timerInterval);
+
+            alert(
+                "Time is over. Your exam will be submitted automatically."
+            );
+
+            examForm.submit();
+
+            return;
+        }
+
+
+        totalSeconds--;
+    }
+
+
+    updateTimer();
+
+
+    const timerInterval =
+        setInterval(updateTimer, 1000);
+
+</script>
+
 </body>
 </html>
